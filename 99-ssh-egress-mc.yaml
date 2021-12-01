@@ -1,0 +1,32 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master 
+  name: egress-limit-ssh
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    systemd:
+      units:
+        - contents: |
+            [Unit]
+            Description=Configure egress bandwidth limiting on br-ex for ssh tranfers
+            Requires=ovs-configuration.service
+            After=ovs-configuration.service
+            [Service]
+            Type=oneshot
+            RemainAfterExit=yes
+            ExecStart=/bin/bash -c "phs=$(/bin/nmcli --get-values GENERAL.DEVICES conn show ovs-if-phys0) ;\
+                        /usr/sbin/tc qdisc add dev $phs root handle 1494: htb default 1 ;\
+                        /usr/sbin/tc class add dev $phs parent 1494: classid 1494:1 htb rate 32000000.0kbit ;\
+                        /usr/sbin/tc class add dev $phs parent 1494: classid 1494:41 htb rate 20000.0Kbit ceil 20000.0Kbit burst 2500.0KB cburst 2500.0KB ;\
+                        /usr/sbin/tc qdisc add dev $phs parent 1494:41 handle 205a: netem ;\
+                        /usr/sbin/tc filter add dev $phs protocol ipv6 parent 1494: prio 6 u32 match ip6 dst ::/0 match ip6 src ::/0 match ip6 dport 22 0xffff flowid 1494:41"
+            ExecStop=/bin/bash -c "phs=$(/bin/nmcli --get-values GENERAL.DEVICES conn show ovs-if-phys0) ;\
+                        /usr/sbin/tc qdisc del dev $phs root"
+            [Install]
+            WantedBy=multi-user.target
+          enabled: true
+          name: egress-limit-ssh.service
