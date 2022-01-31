@@ -3,7 +3,7 @@ kind: MachineConfig
 metadata:
   labels:
     machineconfiguration.openshift.io/role: master 
-  name: egress-limit-all-ipv6
+  name: egress-limit-all-ipv4
 spec:
   config:
     ignition:
