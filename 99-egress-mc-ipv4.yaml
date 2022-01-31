@@ -23,7 +23,7 @@ spec:
                         /usr/sbin/tc class add dev $phs parent 1494: classid 1494:1 htb rate 32000000.0kbit ;\
                         /usr/sbin/tc class add dev $phs parent 1494: classid 1494:158 htb rate 20000.0Kbit ceil 20000.0Kbit burst 2500.0KB cburst 2500.0KB ;\
                         /usr/sbin/tc qdisc add dev $phs parent 1494:158 handle 2cfb: netem delay 115.0ms ;\
-                        /usr/sbin/tc filter add dev $phs protocol ipv6 parent 1494: prio 6 u32 match ip dst 0.0.0.0/0 match ip src 0.0.0.0/0 flowid 1494:158"
+                        /usr/sbin/tc filter add dev $phs protocol ip parent 1494: prio 6 u32 match ip dst 0.0.0.0/0 match ip src 0.0.0.0/0 flowid 1494:158"
             ExecStop=/bin/bash -c "phs=$(/bin/nmcli --get-values GENERAL.DEVICES conn show ovs-if-phys0) ;\
                         /usr/sbin/tc qdisc del dev $phs root"
             [Install]
