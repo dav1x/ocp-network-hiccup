@@ -1,0 +1,40 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: ingress-limit-ipv6
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    systemd:
+      units:
+        - contents: |
+            [Unit]
+            Description=Configure ingress bandwidth limiting and latency on br-ex for all tranfers
+            Requires=ovs-configuration.service
+            After=ovs-configuration.service
+            [Service]
+            Type=oneshot
+            RemainAfterExit=yes
+            ExecStart=/bin/bash -c "phs=$(/bin/nmcli --get-values GENERAL.DEVICES conn show ovs-if-phys0) ;\
+                        modprobe ifb ;\
+                        /usr/sbin/ip link add ifb5268 type ifb ;\
+                        /usr/sbin/ip link set dev ifb5268 up ;\
+                        /usr/sbin/tc qdisc add dev $phs ingress ;\
+                        /usr/sbin/tc filter add dev $phs parent ffff: protocol ipv6 u32 match u32 0 0 flowid 1494: action mirred egress redirect dev ifb5268 ;\
+                        /usr/sbin/tc qdisc add dev ifb5268 root handle 1494: htb default 1 ;\
+                        /usr/sbin/tc class add dev ifb5268 parent 1494: classid 1494:1 htb rate 32000000.0kbit ;\
+                        /usr/sbin/tc class add dev ifb5268 parent 1494: classid 1494:41 htb rate 20000.0Kbit ceil 20000.0Kbit burst 2500.0KB cburst 2500.0KB ;\
+                        /usr/sbin/tc qdisc add dev ifb5268 parent 1494:41 handle 205a: netem delay 115.0ms ;\
+                        /usr/sbin/tc filter add dev ifb5268 protocol ipv6 parent 1494: prio 6 u32 match ip dst 0.0.0.0/0 match ip src 0.0.0.0/0 flowid 1494:41" 
+            ExecStop=/bin/bash -c "phs=$(/bin/nmcli --get-values GENERAL.DEVICES conn show ovs-if-phys0) ;\
+                        /usr/sbin/tc qdisc del dev $phs ingress ;\
+                        /usr/sbin/tc qdisc del dev ifb5268 root ;\
+                        /usr/sbin/ip link set dev ifb5268 down ;\
+                        /usr/sbin/ip link delete ifb5268"
+            [Install]
+            WantedBy=multi-user.target
+          enabled: true
+          name: ingress-limit.service

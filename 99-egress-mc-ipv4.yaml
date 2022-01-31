@@ -1,0 +1,32 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master 
+  name: egress-limit-all-ipv6
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    systemd:
+      units:
+        - contents: |
+            [Unit]
+            Description=Configure egress bandwidth limiting and add 115ms latency on br-ex for all tranfers
+            Requires=ovs-configuration.service
+            After=ovs-configuration.service
+            [Service]
+            Type=oneshot
+            RemainAfterExit=yes
+            ExecStart=/bin/bash -c "phs=$(/bin/nmcli --get-values GENERAL.DEVICES conn show ovs-if-phys0) ;\
+                        /usr/sbin/tc qdisc add dev $phs root handle 1494: htb default 1 ;\
+                        /usr/sbin/tc class add dev $phs parent 1494: classid 1494:1 htb rate 32000000.0kbit ;\
+                        /usr/sbin/tc class add dev $phs parent 1494: classid 1494:158 htb rate 20000.0Kbit ceil 20000.0Kbit burst 2500.0KB cburst 2500.0KB ;\
+                        /usr/sbin/tc qdisc add dev $phs parent 1494:158 handle 2cfb: netem delay 115.0ms ;\
+                        /usr/sbin/tc filter add dev $phs protocol ipv6 parent 1494: prio 6 u32 match ip dst 0.0.0.0/0 match ip src 0.0.0.0/0 flowid 1494:158"
+            ExecStop=/bin/bash -c "phs=$(/bin/nmcli --get-values GENERAL.DEVICES conn show ovs-if-phys0) ;\
+                        /usr/sbin/tc qdisc del dev $phs root"
+            [Install]
+            WantedBy=multi-user.target
+          enabled: true
+          name: egress-limit.service
