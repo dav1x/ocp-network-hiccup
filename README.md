@@ -23,8 +23,8 @@ In our case we will be applying these rules to our hub cluster as MachineConfigs
 Additionally, a container can be used to apply tc commands to the host:
 
 ```
-podman run -it –privileged --network=host -t quay.io/dphillip/tcconfig:latest tcset ens192 --direction outgoing --rate 20Mbps --delay 115ms
-podman run -it –privileged --network=host -t quay.io/dphillip/tcconfig:latest tcset ens192 --direction incoming --rate 20Mbps --delay 115ms
+podman run -it -–privileged --network=host -t quay.io/dphillip/tcconfig:latest tcset ens192 --direction outgoing --rate 20Mbps --delay 115ms
+podman run -it -–privileged --network=host -t quay.io/dphillip/tcconfig:latest tcset ens192 --direction incoming --rate 20Mbps --delay 115ms
 
 
 podman run -it –privileged --network=host -t quay.io/dphillip/tcconfig:latest tcshow ens192
