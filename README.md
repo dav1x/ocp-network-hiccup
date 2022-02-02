@@ -19,3 +19,34 @@ tcset br-ex --direction outgoing --rate 20Mbps --delay 115ms  --tc-script
 ```
 
 In our case we will be applying these rules to our hub cluster as MachineConfigs. For our disconnected registry we will use the tc commands.
+
+Additionally, a container can be used to apply tc commands to the host:
+
+```
+podman run -it –privileged --network=host -t quay.io/dphillip/tcconfig:latest tcset ens192 --direction outgoing --rate 20Mbps --delay 115ms
+podman run -it –privileged --network=host -t quay.io/dphillip/tcconfig:latest tcset ens192 --direction incoming --rate 20Mbps --delay 115ms
+
+
+podman run -it –privileged --network=host -t quay.io/dphillip/tcconfig:latest tcshow ens192
+
+{
+    "ens192": {
+        "outgoing": {
+            "protocol=ip": {
+                "filter_id": "800::800",
+                "delay": "115ms",
+                "rate": "20Mbps"
+            }
+        },
+        "incoming": {
+            "protocol=ip": {
+                "filter_id": "800::801",
+                "delay": "115ms",
+                "rate": "20Mbps"
+            }
+        }
+    }
+}
+
+
+```
